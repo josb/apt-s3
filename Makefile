@@ -13,3 +13,5 @@ clean:
 deb:
 	dpkg-buildpackage -us -uc
 
+install: 
+	install -m 0755 src/s3 /usr/lib/apt/methods
