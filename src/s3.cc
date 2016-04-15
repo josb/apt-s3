@@ -684,6 +684,9 @@ void HttpMethod::SendReq(FetchItem *Itm,CircleBuf &Out)
    if (Itm->Uri.length() >= sizeof(Buf))
        abort();
        
+   string bucket = Uri.Host.substr(0, Uri.Host.find("."));
+   if (Debug) cerr << "Bucket: " << bucket << endl;
+
    // Stupid workaround for https://forums.aws.amazon.com/thread.jspa?threadID=55746
    // tl;dr s3 does not play nice with filenames that have a + sign in them
    string normalized_path = QuoteString(Uri.Path, "~");
@@ -840,16 +843,17 @@ void HttpMethod::SendReq(FetchItem *Itm,CircleBuf &Out)
    char headertext[SLEN], signature[SLEN];
    
    if (iamRole.Exists()) {
-      string date_header = "x-amz-date:" + dateString;
-      Req += date_header + "\r\n";
-      
-      string token_header = "x-amz-security-token:" + iamRole.credentials->token;
+      string token_header = "X-Amz-Security-Token: " + iamRole.credentials->token;
+      string token2_header = "x-amz-security-token:" + iamRole.credentials->token;
       Req += token_header + "\r\n";
+
+      string content_header = "application/xml";
+      Req += "Content-type: " + content_header + "\r\n";
       
-      sprintf(headertext,"GET\n\n\n\n%s\n%s\n%s", date_header.c_str(), token_header.c_str(),  normalized_path.c_str());
+      sprintf(headertext,"GET\n\n%s\n%s\n%s\n/%s%s", content_header.c_str(), dateString.c_str(), token2_header.c_str(), bucket.c_str(), normalized_path.c_str());
       
       if (Debug == true)
-         cerr << "To Sign:\n" << string(headertext);
+         cerr << "To Sign:" << endl << string(headertext) << endl << "END" << endl;
    	
       doEncrypt(headertext, signature, extractedPassword.c_str());
    }
@@ -863,7 +867,7 @@ void HttpMethod::SendReq(FetchItem *Itm,CircleBuf &Out)
    Req += "User-Agent: Ubuntu APT-HTTP/1.3 ("VERSION")\r\n\r\n";
 
    if (Debug == true)
-     cerr << "Request" << endl << Req << endl;
+     cerr << "Request:" << endl << Req << endl << "END" << endl;
 
    Out.Read(Req);
 }
