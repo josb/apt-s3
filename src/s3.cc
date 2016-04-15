@@ -842,14 +842,14 @@ void HttpMethod::SendReq(FetchItem *Itm,CircleBuf &Out)
    
    char headertext[SLEN], signature[SLEN];
    
+   string content_header = "application/xml";
+   Req += "Content-type: " + content_header + "\r\n";
+
    if (iamRole.Exists()) {
       string token_header = "X-Amz-Security-Token: " + iamRole.credentials->token;
       string token2_header = "x-amz-security-token:" + iamRole.credentials->token;
       Req += token_header + "\r\n";
 
-      string content_header = "application/xml";
-      Req += "Content-type: " + content_header + "\r\n";
-      
       sprintf(headertext,"GET\n\n%s\n%s\n%s\n/%s%s", content_header.c_str(), dateString.c_str(), token2_header.c_str(), bucket.c_str(), normalized_path.c_str());
       
       if (Debug == true)
@@ -858,7 +858,11 @@ void HttpMethod::SendReq(FetchItem *Itm,CircleBuf &Out)
       doEncrypt(headertext, signature, extractedPassword.c_str());
    }
    else {
-      sprintf(headertext,"GET\n\n\n%s\n%s", dateString.c_str(), normalized_path.c_str());
+      sprintf(headertext,"GET\n\n%s\n%s\n/%s%s", content_header.c_str(), dateString.c_str(), bucket.c_str(), normalized_path.c_str());
+
+      if (Debug == true)
+         cerr << "To Sign:" << endl << string(headertext) << endl << "END" << endl;
+
       doEncrypt(headertext, signature, extractedPassword.c_str());
    }
 
